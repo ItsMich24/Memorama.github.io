@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Memorama</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+        }
+        canvas {
+            display: block;
+            margin: auto;
+            background-color: black;
+        }
+        #mensaje {
+            position: absolute;
+            top: calc(100vh - 100px);
+            left: 50%;
+            transform: translateX(-50%);
+            color: white;
+            font-size: 20px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="pantalla" width="800" height="600"></canvas>
+    <div id="mensaje"></div>
+
+    <script>
+        const BLANCO = '#ffffff';
+        const NEGRO = '#000000';
+
+        const canvas = document.getElementById('pantalla');
+        const context = canvas.getContext('2d');
+
+        class Carta {
+            constructor(imagen, x, y) {
+                this.imagen = imagen;
+                this.x = x;
+                this.y = y;
+                this.ancho = 100;
+                this.alto = 150;
+                this.volteada = false;
+            }
+
+            mostrar() {
+                if (!this.volteada) {
+                    context.fillStyle = BLANCO;
+                    context.fillRect(this.x, this.y, this.ancho, this.alto);
+                } else {
+                    context.drawImage(this.imagen, this.x, this.y);
+                }
+            }
+
+            clic_en_carta(pos) {
+                const [x, y] = pos;
+                return this.x <= x && x <= this.x + this.ancho && this.y <= y && y <= this.y + this.alto;
+            }
+        }
+
+        function juego_memorama() {
+            const mensajeDiv = document.getElementById('mensaje');
+            const imagenes = [
+                'img/carta1.png', 'img/carta1.png',
+                'img/carta2.png', 'img/carta2.png',
+                'img/carta3.png', 'img/carta3.png',
+                'img/carta4.png', 'img/carta4.png'
+            ];
+
+            randomizarArray(imagenes);
+
+            const cartas = [];
+            for (let fila = 0; fila < 2; fila++) {
+                for (let columna = 0; columna < 4; columna++) {
+                    const carta = new Carta(new Image(), 50 + columna * 150, 50 + fila * 200);
+                    carta.imagen.src = imagenes.pop();
+                    cartas.push(carta);
+                }
+            }
+
+            let seleccionadas = [];
+            let intentos = 0;
+            let fin_juego = false;
+
+            function loop() {
+                if (!fin_juego) {
+                    requestAnimationFrame(loop);
+                }
+
+                for (const evento of ['mousedown', 'touchstart']) {
+                    canvas.addEventListener(evento, function(event) {
+                        const pos = [event.clientX - canvas.getBoundingClientRect().left, event.clientY - canvas.getBoundingClientRect().top];
+                        for (const carta of cartas) {
+                            if (carta.clic_en_carta(pos) && seleccionadas.length < 2 && !carta.volteada) {
+                                carta.volteada = true;
+                                seleccionadas.push(carta);
+                            }
+                        }
+
+                        if (seleccionadas.length === 2) {
+                            setTimeout(() => {
+                                if (seleccionadas[0].imagen.src === seleccionadas[1].imagen.src) {
+                                    seleccionadas = [];
+                                } else {
+                                    seleccionadas[0].volteada = false;
+                                    seleccionadas[1].volteada = false;
+                                    seleccionadas = [];
+                                }
+                                intentos++;
+                            }, 500);
+                        }
+
+                        if (cartas.every(carta => carta.volteada)) {
+                            fin_juego = true;
+                        }
+                    });
+                }
+
+                context.fillStyle = NEGRO;
+                context.fillRect(0, 0, canvas.width, canvas.height);
+                for (const carta of cartas) {
+                    carta.mostrar();
+                }
+
+                if (fin_juego) {
+                    const mensaje = `¡Felicidades! Has completado el memorama en ${intentos} intentos.`;
+                    mensajeDiv.textContent = mensaje;
+                    mensajeDiv.style.display = 'block';
+                }
+            }
+
+            loop();
+        }
+
+        function randomizarArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+        }
+
+        juego_memorama();
+    </script>
+</body>
+</html>
